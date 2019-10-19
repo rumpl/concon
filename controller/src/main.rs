@@ -1,11 +1,14 @@
 use compose_yml::v2::{File, Service};
 use k8s_openapi::api::apps::v1 as apps;
+use k8s_openapi::api::core::v1 as api;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1 as meta;
 use kube::{
     api::{Api, Informer, Object, PostParams, RawApi, Void, WatchEvent},
     client::APIClient,
     config,
 };
-use serde_json::json;
+use serde_json;
+use std::collections::BTreeMap;
 
 type KubeFile = Object<File, Void>;
 
@@ -47,45 +50,55 @@ fn create_pod(name: &str, service: &Service) {
     let client = APIClient::new(config);
     let deployments = Api::v1Deployment(client).within("default");
     println!("Creating Deployment");
-    // TODO: use kube openapi for this
-    let p = json!({
-        "apiVersion": "apps/v1",
-        "kind": "Deployment",
-        "metadata": {
-            "name": "hello-deployment",
-            "labels": {
-                "app": name,
-            }
-        },
-        "spec": {
-            "replicas": 1,
-            "selector": {
-                "matchLabels": {
-                    "app": name,
-                },
+
+    let mut map = BTreeMap::new();
+    map.insert(String::from("app"), String::from(name));
+
+    let mut map2 = BTreeMap::new();
+    map2.insert(String::from("app"), String::from(name));
+
+    let mut map3 = BTreeMap::new();
+    map3.insert(String::from("app"), String::from(name));
+
+    let deployment = apps::Deployment {
+        metadata: Some(meta::ObjectMeta {
+            name: Some(String::from("hello-deployment")),
+            labels: Some(map),
+            ..Default::default()
+        }),
+        spec: Some(apps::DeploymentSpec {
+            replicas: Some(1),
+            selector: meta::LabelSelector {
+                match_labels: Some(map2),
+                ..Default::default()
             },
-            "template": {
-                "metadata": {
-                    "labels": {
-                        "app": name
-                    },
-                },
-                "spec": {
-                "containers": [{
-                        "name": name,
-                        "image": service.image.as_ref().unwrap(),
-                        "args": ["-text", "hello"],
-                        "ports": [{
-                            "containerPort": 5678,
-                        }],
+            template: api::PodTemplateSpec {
+                metadata: Some(meta::ObjectMeta {
+                    name: Some(String::from(name)),
+                    labels: Some(map3),
+                    ..Default::default()
+                }),
+                spec: Some(api::PodSpec {
+                    containers: vec![api::Container {
+                        name: String::from(name),
+                        image: Some(service.image.as_ref().unwrap().to_string()),
+                        args: Some(vec![String::from("-text"), String::from("hello")]),
+                        ports: Some(vec![api::ContainerPort {
+                            container_port: 5678,
+                            ..Default::default()
+                        }]),
+                        ..Default::default()
                     }],
-                },
+                    ..Default::default()
+                }),
             },
-        },
-    });
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
 
     let pp = PostParams::default();
-    match deployments.create(&pp, serde_json::to_vec(&p).unwrap()) {
+    match deployments.create(&pp, serde_json::to_vec(&deployment).unwrap()) {
         Ok(o) => {
             println!("Created {}", o.metadata.name);
         }
