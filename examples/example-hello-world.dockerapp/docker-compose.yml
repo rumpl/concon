@@ -1,0 +1,12 @@
+apiVersion: compose.rumpl.dev/v1
+kind: Compose
+metadata:
+  name: echo
+spec:
+  version: "3.6"
+  services:
+    hello:
+      image: hashicorp/http-echo
+      command: ["-text", "hello"]
+      ports:
+        - 8080:5678

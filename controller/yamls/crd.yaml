@@ -1,0 +1,15 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: composes.compose.rumpl.dev
+spec:
+  group: compose.rumpl.dev
+  versions:
+    - name: v1
+      served: true
+      storage: true
+  scope: Namespaced
+  names:
+    plural: composes
+    singular: compose
+    kind: Compose
