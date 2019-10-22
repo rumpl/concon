@@ -52,7 +52,7 @@ fn delete_deployment() {
     println!("Deleting  Deployment");
     let dp = DeleteParams::default();
     match deployments.delete("hello-deployment", &dp) {
-        Ok(o) => println!("Deleted"),
+        Ok(_o) => println!("Deleted"),
         Err(e) => eprintln!("Unable to delete deployment {}", e),
     }
 }
