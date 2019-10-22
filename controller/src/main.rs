@@ -3,7 +3,7 @@ use k8s_openapi::api::apps::v1 as apps;
 use k8s_openapi::api::core::v1 as api;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1 as meta;
 use kube::{
-    api::{Api, Informer, Object, PostParams, RawApi, Void, WatchEvent},
+    api::{Api, DeleteParams, Informer, Object, PostParams, RawApi, Void, WatchEvent},
     client::APIClient,
     config,
 };
@@ -40,8 +40,20 @@ fn handle(event: WatchEvent<KubeFile>) {
             }
         }
         WatchEvent::Modified(_book) => println!("Modified"),
-        WatchEvent::Deleted(_book) => println!("Deleted"),
+        WatchEvent::Deleted(_book) => delete_deployment(),
         _ => println!("another event"),
+    }
+}
+
+fn delete_deployment() {
+    let config = config::load_kube_config().expect("failed to load kubeconfig");
+    let client = APIClient::new(config);
+    let deployments = Api::v1Deployment(client).within("default");
+    println!("Deleting  Deployment");
+    let dp = DeleteParams::default();
+    match deployments.delete("hello-deployment", &dp) {
+        Ok(o) => println!("Deleted"),
+        Err(e) => eprintln!("Unable to delete deployment {}", e),
     }
 }
 
