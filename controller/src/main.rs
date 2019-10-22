@@ -1,4 +1,4 @@
-use compose_yml::v2::{File, Service};
+use compose_yml::v2::{File, Ports::Port, Service};
 use k8s_openapi::api::apps::v1 as apps;
 use k8s_openapi::api::core::v1 as api;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1 as meta;
@@ -60,6 +60,16 @@ fn create_pod(name: &str, service: &Service) {
     let mut map3 = BTreeMap::new();
     map3.insert(String::from("app"), String::from(name));
 
+    let mut ports = Vec::new();
+    for port in &service.ports {
+        let port_mapping = port.value().unwrap();
+        if let Port(port) = port_mapping.container_ports {
+            ports.push(i32::from(port))
+        }
+    }
+
+    println!("{:?}", ports);
+
     let deployment = apps::Deployment {
         metadata: Some(meta::ObjectMeta {
             name: Some(String::from("hello-deployment")),
@@ -84,7 +94,7 @@ fn create_pod(name: &str, service: &Service) {
                         image: Some(service.image.as_ref().unwrap().to_string()),
                         args: Some(vec![String::from("-text"), String::from("hello")]),
                         ports: Some(vec![api::ContainerPort {
-                            container_port: 5678,
+                            container_port: *ports.first().unwrap(),
                             ..Default::default()
                         }]),
                         ..Default::default()
