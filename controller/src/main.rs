@@ -1,4 +1,4 @@
-use compose_yml::v2::{File, Ports::Port, Service};
+use compose_yml::v2::{CommandLine, File, Ports::Port, Service};
 use k8s_openapi::api::apps::v1 as apps;
 use k8s_openapi::api::core::v1 as api;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1 as meta;
@@ -80,7 +80,11 @@ fn create_pod(name: &str, service: &Service) {
         }
     }
 
-    println!("{:?}", ports);
+    let command = service.command.as_ref().unwrap();
+    let cmd = match command {
+        CommandLine::ShellCode(d) => vec![d.to_string()],
+        CommandLine::Parsed(v) => v.iter().map(|x| x.to_string()).collect(),
+    };
 
     let deployment = apps::Deployment {
         metadata: Some(meta::ObjectMeta {
@@ -104,7 +108,7 @@ fn create_pod(name: &str, service: &Service) {
                     containers: vec![api::Container {
                         name: String::from(name),
                         image: Some(service.image.as_ref().unwrap().to_string()),
-                        args: Some(vec![String::from("-text"), String::from("hello")]),
+                        args: Some(cmd),
                         ports: Some(vec![api::ContainerPort {
                             container_port: *ports.first().unwrap(),
                             ..Default::default()
